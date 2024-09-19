@@ -1,13 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { CameraView, Camera } from 'expo-camera';
+import { StyleSheet, Text, TouchableOpacity, View, Image } from 'react-native';
+import { CameraView, Camera, CameraCapturedPicture } from 'expo-camera';
 
 export default function CameraScreen() {
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const cameraRef = useRef<CameraView>(null);
   const [isCameraReady, setIsCameraReady] = useState(false);
-  // @TODO - Fix the type of photo
-  const [photo, setPhoto] = useState<any>(null);
+  const [photo, setPhoto] = useState<CameraCapturedPicture | null>(null);  // Updated type for photo
 
   useEffect(() => {
     (async () => {
@@ -25,8 +24,12 @@ export default function CameraScreen() {
 
   const takePicture = async () => {
     if (cameraRef.current && isCameraReady) {
-      const photo = await cameraRef.current.takePictureAsync();  // Correctly call takePictureAsync
-      setPhoto(photo);
+      try {
+        const photo = await cameraRef.current.takePictureAsync() as CameraCapturedPicture;
+        setPhoto(photo);
+      } catch (error) {
+        console.error("Error taking picture: ", error);
+      }
     }
   };
 
@@ -42,7 +45,14 @@ export default function CameraScreen() {
           <Text style={styles.text}>Take Picture</Text>
         </TouchableOpacity>
       </View>
-      {photo && <Text>Photo taken! Check your camera roll.</Text>}
+
+      {/* Render the image preview if a photo is taken */}
+      {photo && (
+        <Image
+          source={{ uri: photo.uri }}  // Set the source to the captured photo URI
+          style={styles.thumbnail}  // Use the thumbnail style to position it in the bottom-right corner
+        />
+      )}
     </View>
   );
 }
@@ -69,4 +79,14 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
   },
+    thumbnail: {
+      position: 'absolute',
+      bottom: 70,
+      right: 10,
+      width: 100,
+      height: 100,
+      borderRadius: 5,
+      borderWidth: 2,
+      borderColor: 'white',
+    },
 });

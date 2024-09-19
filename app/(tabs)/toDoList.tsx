@@ -3,7 +3,7 @@ import { Button, FlatList, TouchableOpacity, StyleSheet } from 'react-native';
 import { Text, View, TextInput } from '@/components/Themed';  // Import Themed components
 import Colors from '@/constants/Colors';  // Import your Colors
 
-export default function TabTwoScreen() {
+export default function TabToDoScreen() {
   const [todos, setTodos] = useState<{ id: string; text: string }[]>([]);
   const [newTodo, setNewTodo] = useState('');
 

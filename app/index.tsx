@@ -42,29 +42,44 @@ export default function CameraScreen() {
     }
   };
 
+  const resetCamera = () => {
+    // Reset the photo and pinyin result to go back to the camera
+    setPhoto(null);
+    setPinyinResult(null);
+  };
+
   return (
     <View style={styles.container}>
-      <CameraView
-        style={styles.camera}
-        ref={cameraRef}
-        onCameraReady={() => setIsCameraReady(true)}
-      />
-      <View style={styles.buttonContainer}>
-        <TouchableOpacity style={styles.button} onPress={takePicture}>
-          <Text style={styles.text}>Take Picture</Text>
-        </TouchableOpacity>
-      </View>
-
-      {photo && (
-        <Image
-          source={{ uri: photo.uri }}
-          style={styles.thumbnail}
-        />
-      )}
-
-      {/* Display the pinyin result after processing */}
-      {pinyinResult && (
-        <Text style={styles.pinyinText}>Pinyin: {pinyinResult}</Text>
+      {photo ? (
+        // Display the captured photo and the close button
+        <View style={styles.photoContainer}>
+          <Image
+            source={{ uri: photo.uri }}
+            style={styles.fullScreenImage}
+          />
+          {/* Close Button */}
+          <TouchableOpacity style={styles.closeButton} onPress={resetCamera}>
+            <Text style={styles.closeButtonText}>X</Text>
+          </TouchableOpacity>
+          {/* Display the pinyin result */}
+          {pinyinResult && (
+            <Text style={styles.pinyinText}>Pinyin: {pinyinResult}</Text>
+          )}
+        </View>
+      ) : (
+        // Display the camera view
+        <View style={styles.container}>
+          <CameraView
+            style={styles.camera}
+            ref={cameraRef}
+            onCameraReady={() => setIsCameraReady(true)}
+          />
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity style={styles.button} onPress={takePicture}>
+              <Text style={styles.text}>Take Picture</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       )}
     </View>
   );
@@ -106,6 +121,29 @@ const styles = StyleSheet.create({
     marginTop: 20,
     fontSize: 18,
     textAlign: 'center',
-    color: 'white'
-  }
+    color: 'white',
+  },
+  photoContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  fullScreenImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  closeButton: {
+    position: 'absolute',
+    top: 50,
+    right: 20,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    padding: 10,
+    borderRadius: 50,
+  },
+  closeButtonText: {
+    color: 'white',
+    fontSize: 18,
+  },
 });

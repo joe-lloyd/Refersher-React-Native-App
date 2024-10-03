@@ -6,18 +6,22 @@ export const processImage = async (imageUri: string): Promise<string> => {
   try {
     const recognizedText = await TextRecognition.recognize(imageUri, TextRecognitionScript.CHINESE);
 
-    console.log("Recognized Text: ", recognizedText?.text);
+    console.log("Original Recognized Text: ", recognizedText?.text);
 
-    return recognizedText?.text || ''; // Return the recognized text or an empty string
+    // Filter out non-Chinese characters using regex
+    const chineseOnlyText = (recognizedText?.text || '').match(/[\u4e00-\u9fff]/g)?.join('') || '';
+
+    console.log("Filtered Chinese Text: ", chineseOnlyText);
+
+    return chineseOnlyText;
   } catch (error) {
     console.error('Error during OCR:', error);
     return '';
   }
 };
 
-
 export const convertToPinyin = (chineseText: string): string => {
-  const pinyinText = pinyin(chineseText, { type: 'string' }); // Converts to pinyin without tones
+  const pinyinText = pinyin(chineseText, { type: 'string' });
   console.log('Pinyin: ', pinyinText);
   return pinyinText;
 };

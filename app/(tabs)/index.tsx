@@ -1,84 +1,111 @@
-import React, { useEffect } from 'react';
-import { Button, Platform, Alert, StyleSheet } from 'react-native';
-import * as Notifications from 'expo-notifications';
-import { View, Text } from '@/components/Themed';
-import * as Device from 'expo-device';
+import React, { useState, useEffect, useRef } from 'react';
+import { StyleSheet, Text, TouchableOpacity, View, Image } from 'react-native';
+import { CameraView, Camera, CameraCapturedPicture } from 'expo-camera';
+import { processImage, convertToPinyin } from '@/services/ocrService';
 
-// Configure Notifications (triggered for both iOS and Android)
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
-});
+export default function CameraScreen() {
+  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
+  const cameraRef = useRef<CameraView>(null);
+  const [isCameraReady, setIsCameraReady] = useState(false);
+  const [photo, setPhoto] = useState<CameraCapturedPicture | null>(null);
+  const [pinyinResult, setPinyinResult] = useState<string | null>(null);
 
-export default function TabOneScreen() {
   useEffect(() => {
-    registerForPushNotificationsAsync().then(token => console.log(token));
-
-    const subscription = Notifications.addNotificationReceivedListener(notification => {
-      console.log('Notification received:', notification);
-    });
-
-    return () => subscription.remove();
+    (async () => {
+      const { status } = await Camera.requestCameraPermissionsAsync();
+      setHasPermission(status === 'granted');
+    })();
   }, []);
 
-  const handlePushNotification = async () => {
-    await Notifications.scheduleNotificationAsync({
-      content: {
-        title: 'Push Notification 🎉',
-        body: 'This is a local push notification!',
-      },
-      trigger: { seconds: 2 }, // Wait 2 seconds before triggering
-    });
+  if (hasPermission === null) {
+    return <Text>Requesting for camera permission...</Text>;
+  }
+  if (hasPermission === false) {
+    return <Text>No access to camera</Text>;
+  }
+
+  const takePicture = async () => {
+    if (cameraRef.current && isCameraReady) {
+      try {
+        const photo = await cameraRef.current.takePictureAsync() as CameraCapturedPicture;
+        setPhoto(photo);
+
+        // Process the image using ML Kit's text recognition and convert to Pinyin
+        const recognizedText = await processImage(photo.uri); // Pass the photo URI
+        console.log("Recognized Text: ", recognizedText)
+        const pinyinText = convertToPinyin(recognizedText); // Convert the recognized text to Pinyin
+        setPinyinResult(pinyinText);
+
+      } catch (error) {
+        console.error("Error taking picture: ", error);
+      }
+    }
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Tab One - Push Notification</Text>
-      <Button title="Send Push Notification" onPress={handlePushNotification} />
+      <CameraView
+        style={styles.camera}
+        ref={cameraRef}
+        onCameraReady={() => setIsCameraReady(true)}
+      />
+      <View style={styles.buttonContainer}>
+        <TouchableOpacity style={styles.button} onPress={takePicture}>
+          <Text style={styles.text}>Take Picture</Text>
+        </TouchableOpacity>
+      </View>
+
+      {photo && (
+        <Image
+          source={{ uri: photo.uri }}
+          style={styles.thumbnail}
+        />
+      )}
+
+      {/* Display the pinyin result after processing */}
+      {pinyinResult && (
+        <Text style={styles.pinyinText}>Pinyin: {pinyinResult}</Text>
+      )}
     </View>
   );
-}
-
-async function registerForPushNotificationsAsync() {
-  let token;
-  if (Device.isDevice) {
-    const { status: existingStatus } = await Notifications.getPermissionsAsync();
-    let finalStatus = existingStatus;
-    if (existingStatus !== 'granted') {
-      const { status } = await Notifications.requestPermissionsAsync();
-      finalStatus = status;
-    }
-    if (finalStatus !== 'granted') {
-      Alert.alert('Failed to get push token for push notification!');
-      return;
-    }
-    token = (await Notifications.getExpoPushTokenAsync()).data;
-  } else {
-    Alert.alert('Must use physical device for Push Notifications');
-  }
-
-  if (Platform.OS === 'android') {
-    Notifications.setNotificationChannelAsync('default', {
-      name: 'default',
-      importance: Notifications.AndroidImportance.MAX,
-    });
-  }
-
-  return token;
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: 'center',
+  },
+  camera: {
+    flex: 1,
+  },
+  buttonContainer: {
+    flex: 0.1,
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 20,
+  button: {
+    backgroundColor: 'blue',
+    padding: 10,
+    borderRadius: 5,
   },
+  text: {
+    color: 'white',
+    fontSize: 16,
+  },
+  thumbnail: {
+    position: 'absolute',
+    bottom: 70,
+    right: 10,
+    width: 100,
+    height: 100,
+    borderRadius: 5,
+    borderWidth: 2,
+    borderColor: 'white',
+  },
+  pinyinText: {
+    marginTop: 20,
+    fontSize: 18,
+    textAlign: 'center',
+    color: 'white'
+  }
 });

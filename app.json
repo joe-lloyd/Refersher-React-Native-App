@@ -13,13 +13,15 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.joelloydwebapps.todoapp"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "com.joelloydwebapps.todoapp"
     },
     "web": {
       "bundler": "metro",
@@ -27,7 +29,8 @@
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      "./plugins/withMLKit"
     ],
     "experiments": {
       "typedRoutes": true
@@ -37,6 +40,12 @@
         "projectId": "c3d2238b-f05d-41ab-8d02-7881759711b4"
       }
     },
-    "owner": "joelloydwebapps"
+    "owner": "joelloydwebapps",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/c3d2238b-f05d-41ab-8d02-7881759711b4"
+    }
   }
 }

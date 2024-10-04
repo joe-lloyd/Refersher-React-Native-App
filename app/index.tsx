@@ -1,14 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View, Image } from 'react-native';
 import { CameraView, Camera, CameraCapturedPicture } from 'expo-camera';
-import { processImage, convertToPinyin } from '@/services/ocrService';
+import { processImage } from '@/services/ocrService';
 
 export default function CameraScreen() {
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const cameraRef = useRef<CameraView>(null);
   const [isCameraReady, setIsCameraReady] = useState(false);
   const [photo, setPhoto] = useState<CameraCapturedPicture | null>(null);
-  const [pinyinResult, setPinyinResult] = useState<string | null>(null);
+  const [recognizedData, setRecognizedData] = useState<any[]>([]); // Store recognized text with position
+  const [imageSize, setImageSize] = useState({ width: 0, height: 0 }); // To store displayed image size
+  const [originalImageSize, setOriginalImageSize] = useState({ width: 0, height: 0 }); // To store original image size
 
   useEffect(() => {
     (async () => {
@@ -30,44 +32,80 @@ export default function CameraScreen() {
         const photo = await cameraRef.current.takePictureAsync() as CameraCapturedPicture;
         setPhoto(photo);
 
-        // Process the image using ML Kit's text recognition and convert to Pinyin
-        const recognizedText = await processImage(photo.uri); // Pass the photo URI
-        console.log("Recognized Text: ", recognizedText)
-        const pinyinText = convertToPinyin(recognizedText); // Convert the recognized text to Pinyin
-        setPinyinResult(pinyinText);
+        // Set the original image size for scaling purposes
+        setOriginalImageSize({ width: photo.width, height: photo.height });
+
+        // Process the image using ML Kit's text recognition and get text with positions
+        const recognizedTextData = await processImage(photo.uri);
+        setRecognizedData(recognizedTextData);
 
       } catch (error) {
-        console.error("Error taking picture: ", error);
+        console.error('Error taking picture: ', error);
       }
     }
   };
 
-  const resetCamera = () => {
-    // Reset the photo and pinyin result to go back to the camera
-    setPhoto(null);
-    setPinyinResult(null);
+  const normalizeBoundingBox = (box, displayedImageWidth, displayedImageHeight, originalImageWidth, originalImageHeight) => {
+    // Calculate scaling factor between the original image and displayed image
+    const scaleX = displayedImageWidth / originalImageWidth;
+    const scaleY = displayedImageHeight / originalImageHeight;
+
+    const scaleAdjustment = 0.05;
+    // Normalize the position of the bounding box (just for positioning)
+    return {
+      x: box.x * scaleX,
+      y: box.y * scaleY,
+    };
   };
 
   return (
     <View style={styles.container}>
       {photo ? (
-        // Display the captured photo and the close button
         <View style={styles.photoContainer}>
+          {/* Display the captured image */}
           <Image
             source={{ uri: photo.uri }}
             style={styles.fullScreenImage}
+            onLayout={(event) => {
+              const { width, height } = event.nativeEvent.layout;
+              setImageSize({ width, height });
+            }}
           />
-          {/* Close Button */}
-          <TouchableOpacity style={styles.closeButton} onPress={resetCamera}>
+
+          {/* Display the recognized text as an overlay */}
+          {recognizedData.length > 0 && recognizedData.map((item, index) => {
+            if (!item.text) return null;
+
+            const normalizedBox = normalizeBoundingBox(
+              item.boundingBox,
+              imageSize.width,
+              imageSize.height,
+              originalImageSize.width,
+              originalImageSize.height,
+            );
+
+            return (
+              <View
+                key={index}
+                style={[
+                  styles.textOverlay,
+                  {
+                    top: normalizedBox.y,
+                    left: normalizedBox.x,
+                  },
+                ]}
+              >
+                <Text style={styles.overlayText}>{item.text}</Text>
+              </View>
+            );
+          })}
+
+          {/* Close button to reset */}
+          <TouchableOpacity style={styles.closeButton} onPress={() => setPhoto(null)}>
             <Text style={styles.closeButtonText}>X</Text>
           </TouchableOpacity>
-          {/* Display the pinyin result */}
-          {pinyinResult && (
-            <Text style={styles.pinyinText}>Pinyin: {pinyinResult}</Text>
-          )}
         </View>
       ) : (
-        // Display the camera view
         <View style={styles.container}>
           <CameraView
             style={styles.camera}
@@ -107,32 +145,25 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
   },
-  thumbnail: {
-    position: 'absolute',
-    bottom: 70,
-    right: 10,
-    width: 100,
-    height: 100,
-    borderRadius: 5,
-    borderWidth: 2,
-    borderColor: 'white',
-  },
-  pinyinText: {
-    marginTop: 20,
-    fontSize: 18,
-    textAlign: 'center',
-    color: 'white',
-  },
   photoContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
     position: 'relative',
   },
   fullScreenImage: {
     width: '100%',
     height: '100%',
     resizeMode: 'cover',
+  },
+  textOverlay: {
+    position: 'absolute',
+    backgroundColor: 'rgba(0, 0, 0, 0.8)', // Background of the text box
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 5, // Optional padding to give the text more room inside
+  },
+  overlayText: {
+    color: 'white',
+    fontSize: 16,
   },
   closeButton: {
     position: 'absolute',

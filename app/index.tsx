@@ -8,9 +8,9 @@ export default function CameraScreen() {
   const cameraRef = useRef<CameraView>(null);
   const [isCameraReady, setIsCameraReady] = useState(false);
   const [photo, setPhoto] = useState<CameraCapturedPicture | null>(null);
-  const [recognizedData, setRecognizedData] = useState<any[]>([]); // Store recognized text with position
-  const [imageSize, setImageSize] = useState({ width: 0, height: 0 }); // To store displayed image size
-  const [originalImageSize, setOriginalImageSize] = useState({ width: 0, height: 0 }); // To store original image size
+  const [recognizedData, setRecognizedData] = useState<any[]>([]);
+  const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
+  const [originalImageSize, setOriginalImageSize] = useState({ width: 0, height: 0 });
 
   useEffect(() => {
     (async () => {
@@ -32,10 +32,10 @@ export default function CameraScreen() {
         const photo = await cameraRef.current.takePictureAsync() as CameraCapturedPicture;
         setPhoto(photo);
 
-        // Set the original image size for scaling purposes
+
         setOriginalImageSize({ width: photo.width, height: photo.height });
 
-        // Process the image using ML Kit's text recognition and get text with positions
+
         const recognizedTextData = await processImage(photo.uri);
         setRecognizedData(recognizedTextData);
 
@@ -46,12 +46,11 @@ export default function CameraScreen() {
   };
 
   const normalizeBoundingBox = (box, displayedImageWidth, displayedImageHeight, originalImageWidth, originalImageHeight) => {
-    // Calculate scaling factor between the original image and displayed image
+
     const scaleX = displayedImageWidth / originalImageWidth;
     const scaleY = displayedImageHeight / originalImageHeight;
 
-    const scaleAdjustment = 0.05;
-    // Normalize the position of the bounding box (just for positioning)
+
     return {
       x: box.x * scaleX,
       y: box.y * scaleY,
@@ -62,10 +61,12 @@ export default function CameraScreen() {
     <View style={styles.container}>
       {photo ? (
         <View style={styles.photoContainer}>
-          {/* Display the captured image */}
+
+          <View style={{width: '100%', position: 'relative', aspectRatio: '3 / 4'}}>
           <Image
             source={{ uri: photo.uri }}
-            style={styles.fullScreenImage}
+            style={styles.image}
+            resizeMode="contain"
             onLayout={(event) => {
               const { width, height } = event.nativeEvent.layout;
               setImageSize({ width, height });
@@ -100,6 +101,8 @@ export default function CameraScreen() {
             );
           })}
 
+          </View>
+
           {/* Close button to reset */}
           <TouchableOpacity style={styles.closeButton} onPress={() => setPhoto(null)}>
             <Text style={styles.closeButtonText}>X</Text>
@@ -107,11 +110,14 @@ export default function CameraScreen() {
         </View>
       ) : (
         <View style={styles.container}>
-          <CameraView
-            style={styles.camera}
-            ref={cameraRef}
-            onCameraReady={() => setIsCameraReady(true)}
-          />
+          <View style={styles.cameraContainer}>
+            <CameraView
+              style={styles.camera}
+              ref={cameraRef}
+              onCameraReady={() => setIsCameraReady(true)}
+              ratio={'4:3'}
+            />
+          </View>
           <View style={styles.buttonContainer}>
             <TouchableOpacity style={styles.button} onPress={takePicture}>
               <Text style={styles.text}>Take Picture</Text>
@@ -127,14 +133,22 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: 'center',
+    backgroundColor: '#000',
+  },
+  cameraContainer: {
+    flex: 1,
+    maxWidth: '100%',
   },
   camera: {
     flex: 1,
+    width: '100%',
+    height: 500,
+
   },
   buttonContainer: {
-    flex: 0.1,
     justifyContent: 'center',
     alignItems: 'center',
+    marginBottom: 20,
   },
   button: {
     backgroundColor: 'blue',
@@ -147,19 +161,20 @@ const styles = StyleSheet.create({
   },
   photoContainer: {
     flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
     position: 'relative',
   },
-  fullScreenImage: {
+  image: {
     width: '100%',
     height: '100%',
-    resizeMode: 'cover',
   },
   textOverlay: {
     position: 'absolute',
-    backgroundColor: 'rgba(0, 0, 0, 0.8)', // Background of the text box
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 5, // Optional padding to give the text more room inside
+    padding: 5,
   },
   overlayText: {
     color: 'white',

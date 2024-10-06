@@ -1,12 +1,11 @@
+import React, { useEffect } from 'react';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
-import 'react-native-reanimated';
-
 import { useColorScheme } from '@/components/useColorScheme';
+import mobileAds from 'react-native-google-mobile-ads';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -21,6 +20,15 @@ export default function RootLayout() {
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
     ...FontAwesome.font,
   });
+
+  // Initialize Google Mobile Ads SDK
+  useEffect(() => {
+    mobileAds()
+      .initialize()
+      .then(() => {
+        console.log('Google Mobile Ads initialized');
+      });
+  }, []);
 
   // Expo Router uses Error Boundaries to catch errors in the navigation tree.
   useEffect(() => {

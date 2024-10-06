@@ -9,25 +9,28 @@ interface RecognizedTextData {
   boundingBox: { x: number; y: number; width: number; height: number };
 }
 
-// Function to process the image and get both the Chinese text and its position
 export const processImage = async (imageUri: string): Promise<RecognizedTextData[]> => {
   try {
     const recognizedResult: TextRecognitionResult = await TextRecognition.recognize(imageUri, TextRecognitionScript.CHINESE);
 
     // Extract recognized text and bounding boxes
-    const recognizedData: RecognizedTextData[] = recognizedResult.blocks.map(block => ({
-      text: block.text.match(/[\u4e00-\u9fff]/g)?.join('') || '', // Filter Chinese characters
-      boundingBox: {
-        x: block.frame.left,
-        y: block.frame.top,
-        width: block.frame.width,
-        height: block.frame.height,
-      },
-    }))
-      .filter(item => item.text)
-      .map(block => ({...block, text: convertToPinyin(block.text)}))
+    const recognizedData: RecognizedTextData[] = recognizedResult.blocks.map(block => {
+      if (!block.frame) return;
+      const text = block.text.match(/[\u4e00-\u9fff]/g)?.join('') || ''
+      if (!text) return;
 
-    // console.log('Recognized Data: ', recognizedData);
+      return ({
+        text,
+        boundingBox: {
+          x: block.frame.left,
+          y: block.frame.top,
+          width: block.frame.width,
+          height: block.frame.height,
+        },
+      });
+    })
+      .filter(item => item && item.text)
+      .map(block => ({...block as RecognizedTextData, text: convertToPinyin((block as RecognizedTextData).text)}))
 
     return recognizedData;
   } catch (error) {
@@ -36,8 +39,6 @@ export const processImage = async (imageUri: string): Promise<RecognizedTextData
   }
 };
 
-export const convertToPinyin = (chineseText: string): string | undefined => {
-  if (!chineseText) return;
-  const pinyinText = pinyin(chineseText, { type: 'string' });
-  return pinyinText;
+export const convertToPinyin = (chineseText: string): string => {
+  return pinyin(chineseText, { type: 'string' });
 };
